@@ -1,18 +1,16 @@
 const { chromium } = require('playwright');
 const fs = require('fs');
 
-// Utility: generate a random email
+// Utils
 function randomString(length = 8) {
   const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
   return Array.from({ length }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
 }
 
-// Utility: create delay
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-// CAPTCHA / puzzle keywords to detect
 const CAPTCHA_KEYWORDS = [
   'enter the characters you see',
   'type the characters',
@@ -31,16 +29,21 @@ async function detectCaptcha(page) {
   const browser = await chromium.launch({ headless: true });
   const page = await browser.newPage();
   const screenshotsDir = 'screenshots';
-  const randomEmail = `${randomString()}@qrlfoundation.org`;
+  const email = `${randomString()}@qrlfoundation.org`;
 
   fs.mkdirSync(screenshotsDir, { recursive: true });
 
-  const MAX_RETRIES = 3;
+  const MAX_DURATION_MS = 5 * 60 * 60 * 1000; // 5 hours
+  const startTime = Date.now();
   let attempt = 0;
   let success = false;
 
-  while (attempt < MAX_RETRIES && !success) {
-    console.log(`\n🔁 Attempt ${attempt + 1}/${MAX_RETRIES}`);
+  console.log(`🕐 Starting attempts to create account for ${email}`);
+  console.log(`🧭 Will keep trying for up to 5 hours (until ${new Date(startTime + MAX_DURATION_MS).toLocaleString()})\n`);
+
+  while (Date.now() - startTime < MAX_DURATION_MS && !success) {
+    const now = new Date().toISOString();
+    console.log(`\n🔁 Attempt ${attempt + 1} at ${now}`);
 
     try {
       console.log('🌐 Navigating to KDP homepage...');
@@ -55,7 +58,7 @@ async function detectCaptcha(page) {
 
       console.log('📝 Filling out form...');
       await page.fill('#ap_customer_name', 'Random User');
-      await page.fill('#ap_email', randomEmail);
+      await page.fill('#ap_email', email);
       await page.fill('#ap_password', 'StrongPass123!');
       await page.fill('#ap_password_check', 'StrongPass123!');
       await page.screenshot({ path: `${screenshotsDir}/3-filled-form-${attempt}.png` });
@@ -66,25 +69,31 @@ async function detectCaptcha(page) {
       await page.screenshot({ path: `${screenshotsDir}/4-after-submit-${attempt}.png` });
 
       if (await detectCaptcha(page)) {
-        console.warn('⚠️ CAPTCHA or puzzle detected. Retrying...');
+        console.warn('⚠️ CAPTCHA detected. Retrying...');
         await page.reload();
-        await page.waitForTimeout(3000);
+        await sleep(2000);
         attempt++;
         continue;
       }
 
-      console.log('✅ Account creation submitted successfully (no CAPTCHA).');
+      console.log('✅ Account successfully submitted without CAPTCHA.');
       success = true;
 
     } catch (err) {
       console.error(`❌ Error on attempt ${attempt + 1}:`, err.message);
       await page.screenshot({ path: `${screenshotsDir}/error-${attempt}.png` });
-      attempt++;
+    }
+
+    attempt++;
+
+    if (!success) {
+      console.log('⏳ Waiting 10 seconds before next attempt...');
+      await sleep(10000); // wait 10 seconds before next attempt
     }
   }
 
   if (!success) {
-    console.error('🚫 Failed after max retries. CAPTCHA could not be bypassed.');
+    console.error('\n⛔ Stopped after 5 hours without success.');
   }
 
   await browser.close();
