@@ -25,7 +25,7 @@ jobs:
       run: node kdp_signup.js
 
     - name: Upload Screenshots
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: kdp-signup-screenshots
         path: screenshots/
