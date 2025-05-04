@@ -29,7 +29,7 @@ async function detectCaptcha(page) {
   const browser = await chromium.launch({ headless: true });
   const page = await browser.newPage();
   const screenshotsDir = 'screenshots';
-  const email = `${randomString()}@qrlfoundation.org`;
+  const email = `${randomString()}@gmail.com`;
 
   fs.mkdirSync(screenshotsDir, { recursive: true });
 
