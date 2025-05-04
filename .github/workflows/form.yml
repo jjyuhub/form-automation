@@ -1,0 +1,31 @@
+name: KDP Form Automation (Simulated)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  automate-kdp:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v3
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '20'
+
+    - name: Install Playwright
+      run: |
+        npm install -D playwright
+        npx playwright install
+
+    - name: Run Automation Script
+      run: node kdp_signup.js
+
+    - name: Upload Screenshots
+      uses: actions/upload-artifact@v3
+      with:
+        name: kdp-signup-screenshots
+        path: screenshots/
